@@ -95,12 +95,14 @@ mod NFTMint {
             assert(token_id <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
             assert(self.public_sale_open.read() == true, PUBLIC_SALE_NOT_STARTED);
             // assert(self.erc721.balance_of(recipient) < MAX_TOKENS_PER_ADDRESS, 'Maximum NFT per address reached');
-            let token_uri: felt252 = 'bit.ly/42TzZaT';
+            let token_uri: felt252 = 'https://bit.ly/497SFF6';
             self.erc721._mint(recipient, token_id);
             self.erc721._set_token_uri(token_id, token_uri);
         }
 
         fn set_public_sale_open(ref self: ContractState, public_sale_open: bool) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
             self.public_sale_open.write(public_sale_open);
 
             let current_time = get_block_timestamp();
@@ -112,6 +114,8 @@ mod NFTMint {
         }
 
         fn set_whitelist_merkle_root(ref self: ContractState, whitelist_merkle_root: felt252) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
             self.whitelist_merkle_root.write(whitelist_merkle_root);
 
             let current_time = get_block_timestamp();
