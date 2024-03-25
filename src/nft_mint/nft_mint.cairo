@@ -1,17 +1,21 @@
 #[starknet::contract]
 mod NFTMint {
-    use core::zeroable::Zeroable;
-    use starknet::{ContractAddress, get_block_timestamp};
+    use openzeppelin::access::ownable::interface::IOwnable;
+use core::zeroable::Zeroable;
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use openzeppelin::token::erc721::ERC721Component;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::token::erc20::interface::{
-        IERC20, IERC20Metadata, ERC20ABIDispatcher, ERC20ABIDispatcherTrait
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use alexandria_data_structures::merkle_tree::{
+        Hasher, MerkleTree, poseidon::PoseidonHasherImpl, MerkleTreeTrait
     };
-    use alexandria_data_structures::merkle_tree::{ Hasher, MerkleTree, poseidon::PoseidonHasherImpl, MerkleTreeTrait };
     use terracon_prestige_card::nft_mint::{INFTMint};
-    use terracon_prestige_card::errors::{MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED};
+    use terracon_prestige_card::errors::{
+        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED
+    };
 
+    const MINTING_FEE: u256 = 33000000000000000; // 0.033 ether
     const MAX_SUPPLY: u256 = 1337;
     const OWNER_FREE_MINT_AMOUNT: u256 = 337;
     const WHITELIST_FREE_MINT_END: u256 = OWNER_FREE_MINT_AMOUNT + 100; // 437
@@ -108,6 +112,8 @@ mod NFTMint {
             assert(next_token_id + quantity <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
             // assert(self.erc721.balance_of(recipient) < MAX_TOKENS_PER_ADDRESS, 'Maximum NFT per address reached');
 
+            let owner: ContractAddress = self.ownable.owner();
+
             let mut token_id = next_token_id;
             let mut minted_quantity = 0;
 
@@ -122,6 +128,13 @@ mod NFTMint {
                 } else {
                     // Check if the public sale is open
                     assert(self.public_sale_open.read() == true, PUBLIC_SALE_NOT_STARTED);
+                    let eth_dispatcher = IERC20Dispatcher {
+                        contract_address: 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7 // ETH Contract Address
+                            .try_into()
+                            .unwrap()
+                    };
+                    
+                    eth_dispatcher.transfer_from(get_caller_address(), owner, MINTING_FEE);
                     // Check if the correct minting fee is paid
                     // assert(/* Payment check */, INSUFFICIENT_PAYMENT);
                     self.erc721._mint(recipient, token_id);
