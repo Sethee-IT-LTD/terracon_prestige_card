@@ -12,8 +12,9 @@ mod NFTMint {
     use terracon_prestige_card::nft_mint::{INFTMint};
     use terracon_prestige_card::errors::{MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED};
 
-    const MAX_SUPPLY: u256 = 1000;
-    const MAX_TOKENS_PER_ADDRESS: u256 = 20;
+    const MAX_SUPPLY: u256 = 1337;
+    const OWNER_FREE_MINT_AMOUNT: u256 = 337;
+    const WHITELIST_FREE_MINT_END: u256 = OWNER_FREE_MINT_AMOUNT + 100; // 437
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -35,6 +36,7 @@ mod NFTMint {
     struct Storage {
         public_sale_open: bool,
         whitelist_merkle_root: felt252,
+        next_token_id: u256,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
@@ -86,18 +88,49 @@ mod NFTMint {
         self.erc721.initializer(name, symbol);
         // Set the initial owner of the contract
         self.ownable.initializer(owner);
+
+        // Mint the initial tokens for the contract owner
+        let mut token_id = 1;
+        while token_id <= OWNER_FREE_MINT_AMOUNT {
+            let token_uri: felt252 = 'https://bit.ly/497SFF6';
+            self.erc721._mint(owner, token_id);
+            self.erc721._set_token_uri(token_id, token_uri);
+            token_id += 1;
+        };
+        self.next_token_id.write(token_id);
     }
 
     #[abi(embed_v0)]
     impl NFTMint of INFTMint<ContractState> {
-        fn mint(ref self: ContractState, recipient: ContractAddress, token_id: u256) {
+        fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256) {
             assert(!recipient.is_zero(), INVALID_RECIPIENT);
-            assert(token_id <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
-            assert(self.public_sale_open.read() == true, PUBLIC_SALE_NOT_STARTED);
+            let next_token_id = self.next_token_id.read();
+            assert(next_token_id + quantity <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
             // assert(self.erc721.balance_of(recipient) < MAX_TOKENS_PER_ADDRESS, 'Maximum NFT per address reached');
-            let token_uri: felt252 = 'https://bit.ly/497SFF6';
-            self.erc721._mint(recipient, token_id);
-            self.erc721._set_token_uri(token_id, token_uri);
+
+            let mut token_id = next_token_id;
+            let mut minted_quantity = 0;
+
+            while minted_quantity < quantity {
+                if token_id <= WHITELIST_FREE_MINT_END {
+                    // TODO: Check if the recipient is in the whitelist using the Merkle proof
+                    // If in the whitelist, mint for free
+                    // assert(/* Whitelist check */, WHITELIST_MINT_EXCEEDED);
+                    let token_uri: felt252 = 'https://bit.ly/497SFF6';
+                    self.erc721._mint(recipient, token_id);
+                    self.erc721._set_token_uri(token_id, token_uri);
+                } else {
+                    // Check if the public sale is open
+                    assert(self.public_sale_open.read() == true, PUBLIC_SALE_NOT_STARTED);
+                    // Check if the correct minting fee is paid
+                    // assert(/* Payment check */, INSUFFICIENT_PAYMENT);
+                    self.erc721._mint(recipient, token_id);
+                }
+                token_id += 1;
+                minted_quantity += 1;
+            };
+
+            self.next_token_id.write(token_id);
         }
 
         fn set_public_sale_open(ref self: ContractState, public_sale_open: bool) {
