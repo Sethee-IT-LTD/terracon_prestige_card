@@ -12,12 +12,13 @@ use core::zeroable::Zeroable;
     };
     use terracon_prestige_card::nft_mint::{INFTMint};
     use terracon_prestige_card::errors::{
-        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED
+        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT_EXCEEDED
     };
 
     const MINTING_FEE: u256 = 33000000000000000; // 0.033 ether
     const MAX_SUPPLY: u256 = 1337;
     const OWNER_FREE_MINT_AMOUNT: u256 = 337;
+    const MAX_TOKENS_PER_ADDRESS: u256 = 10;
     const WHITELIST_FREE_MINT_END: u256 = OWNER_FREE_MINT_AMOUNT + 100; // 437
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
@@ -106,7 +107,7 @@ use core::zeroable::Zeroable;
 
     #[abi(embed_v0)]
     impl NFTMint of INFTMint<ContractState> {
-        fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256) {
+        fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256, proof: Array<felt252>) {
             assert(!recipient.is_zero(), INVALID_RECIPIENT);
             let next_token_id = self.next_token_id.read();
             assert(next_token_id + quantity <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
@@ -122,6 +123,11 @@ use core::zeroable::Zeroable;
                     // TODO: Check if the recipient is in the whitelist using the Merkle proof
                     // If in the whitelist, mint for free
                     // assert(/* Whitelist check */, WHITELIST_MINT_EXCEEDED);
+                    let root = self.whitelist_merkle_root.read();
+                    let mut state = PedersenTrait::new(recipient.into());
+                    let mut tree: MerkleTree<Hasher> = MerkleTreeTrait::new();
+                    assert(tree.verify(root, leaf, proof.span()), WHITELIST_MINT_EXCEEDED);
+
                     let token_uri: felt252 = 'https://bit.ly/497SFF6';
                     self.erc721._mint(recipient, token_id);
                     self.erc721._set_token_uri(token_id, token_uri);
