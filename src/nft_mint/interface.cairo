@@ -1,5 +1,11 @@
 use starknet::ContractAddress;
 
+const MAX_TOKENS_PER_ADDRESS: u256 = 10;
+const MINTING_FEE: u256 = 33000000000000000; // 0.033 ether
+const MAX_SUPPLY: u256 = 1337;
+const OWNER_FREE_MINT_AMOUNT: u256 = 337;
+const WHITELIST_FREE_MINT_END: u256 = OWNER_FREE_MINT_AMOUNT + 100; // 437
+
 #[starknet::interface]
 pub trait INFTMint<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, quantity: u256);

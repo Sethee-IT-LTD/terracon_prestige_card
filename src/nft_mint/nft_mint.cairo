@@ -1,7 +1,6 @@
 #[starknet::contract]
 mod NFTMint {
-    use openzeppelin::access::ownable::interface::IOwnable;
-use core::zeroable::Zeroable;
+    use core::zeroable::Zeroable;
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use openzeppelin::token::erc721::ERC721Component;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -9,14 +8,9 @@ use core::zeroable::Zeroable;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use terracon_prestige_card::nft_mint::{INFTMint};
     use terracon_prestige_card::errors::{
-        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT_EXCEEDED
+        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT
     };
-
-    const MINTING_FEE: u256 = 33000000000000000; // 0.033 ether
-    const MAX_SUPPLY: u256 = 1337;
-    const OWNER_FREE_MINT_AMOUNT: u256 = 337;
-    const MAX_TOKENS_PER_ADDRESS: u256 = 10;
-    const WHITELIST_FREE_MINT_END: u256 = OWNER_FREE_MINT_AMOUNT + 100; // 437
+    use terracon_prestige_card::nft_mint::interface::{MAX_TOKENS_PER_ADDRESS, MINTING_FEE, MAX_SUPPLY, OWNER_FREE_MINT_AMOUNT, WHITELIST_FREE_MINT_END};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -51,8 +45,6 @@ use core::zeroable::Zeroable;
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        PreSaleOpen: PreSaleOpen,
-        PreSaleClose: PreSaleClose,
         PublicSaleOpen: PublicSaleOpen,
         PublicSaleClose: PublicSaleClose,
         #[flat]
@@ -62,17 +54,7 @@ use core::zeroable::Zeroable;
         #[flat]
         OwnableEvent: OwnableComponent::Event
     }
-
-    #[derive(Drop, starknet::Event)]
-    struct PreSaleOpen {
-        time: u64
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct PreSaleClose {
-        time: u64
-    }
-
+    
     #[derive(Drop, starknet::Event)]
     struct PublicSaleOpen {
         time: u64
@@ -123,7 +105,7 @@ use core::zeroable::Zeroable;
                     // TODO: Check if the recipient is in the whitelist using the Merkle proof
                     // If in the whitelist, mint for free
                     // assert(/* Whitelist check */, WHITELIST_MINT_EXCEEDED);
-                    assert(whitelisted, WHITELIST_MINT_EXCEEDED);
+                    assert(whitelisted, WHITELIST_MINT);
                     let token_uri: felt252 = 'https://bit.ly/497SFF6';
                     self.erc721._mint(recipient, token_id);
                     self.erc721._set_token_uri(token_id, token_uri);
