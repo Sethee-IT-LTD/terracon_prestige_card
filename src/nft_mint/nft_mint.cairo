@@ -71,10 +71,10 @@ mod NFTMint {
         let symbol = 'HEX';
 
         self.erc721.initializer(name, symbol);
-        // Set the initial owner of the contract
+        /// @dev Set the initial owner of the contract
         self.ownable.initializer(owner);
 
-        // Mint the initial tokens for the contract owner
+        /// @dev Mint the initial tokens for the contract owner
         let mut token_id = 1;
         while token_id <= OWNER_FREE_MINT_AMOUNT {
             let token_uri: felt252 = 'https://bit.ly/497SFF6';
@@ -153,7 +153,7 @@ mod NFTMint {
             address_4: ContractAddress,
             address_5: ContractAddress
         ) {
-            // This function can only be called by the owner
+            /// @dev This function can only be called by the owner
             self.ownable.assert_only_owner();
             self._whitelist_address(address_1, address_2, address_3, address_4, address_5);
         }
@@ -162,7 +162,7 @@ mod NFTMint {
     /// @dev Internal Functions implementation for the NFT Mint contract
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        /// @dev Registers the voters and initializes their voting status to true (can vote)
+        /// @dev Registers the address and initializes their whitelist status to true (can mint)
         fn _whitelist_address(
             ref self: ContractState,
             address_1: ContractAddress,
