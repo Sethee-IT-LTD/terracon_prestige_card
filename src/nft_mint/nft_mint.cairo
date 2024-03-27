@@ -8,7 +8,7 @@ mod NFTMint {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use terracon_prestige_card::nft_mint::{INFTMint};
     use terracon_prestige_card::errors::{
-        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT
+        MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT, MAX_NFT_PER_ADDRESS
     };
     use terracon_prestige_card::nft_mint::interface::{MAX_TOKENS_PER_ADDRESS, MINTING_FEE, MAX_SUPPLY, OWNER_FREE_MINT_AMOUNT, WHITELIST_FREE_MINT_END};
 
@@ -91,7 +91,7 @@ mod NFTMint {
             assert(!recipient.is_zero(), INVALID_RECIPIENT);
             let next_token_id = self.next_token_id.read();
             assert(next_token_id + quantity <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
-            // assert(self.erc721.balance_of(recipient) < MAX_TOKENS_PER_ADDRESS, 'Maximum NFT per address reached');
+            assert(self.erc721.balance_of(recipient) + quantity <= MAX_TOKENS_PER_ADDRESS, MAX_NFT_PER_ADDRESS);
 
             let owner: ContractAddress = self.ownable.owner();
 
@@ -103,14 +103,13 @@ mod NFTMint {
             while minted_quantity < quantity {
                 if token_id <= WHITELIST_FREE_MINT_END {
                     // TODO: Check if the recipient is in the whitelist using the Merkle proof
-                    // If in the whitelist, mint for free
-                    // assert(/* Whitelist check */, WHITELIST_MINT_EXCEEDED);
+                    /// @dev Check if the recipient is whitelisted
                     assert(whitelisted, WHITELIST_MINT);
                     let token_uri: felt252 = 'https://bit.ly/497SFF6';
                     self.erc721._mint(recipient, token_id);
                     self.erc721._set_token_uri(token_id, token_uri);
                 } else {
-                    // Check if the public sale is open
+                    /// @dev Check if the public sale is open
                     assert(self.public_sale_open.read() == true, PUBLIC_SALE_NOT_STARTED);
                     let eth_dispatcher = IERC20Dispatcher {
                         contract_address: 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7 // ETH Contract Address
@@ -133,7 +132,6 @@ mod NFTMint {
         }
 
         fn set_public_sale_open(ref self: ContractState, public_sale_open: bool) {
-            // This function can only be called by the owner
             self.ownable.assert_only_owner();
             self.public_sale_open.write(public_sale_open);
 
@@ -147,15 +145,10 @@ mod NFTMint {
 
         fn whitelist_addresses(
             ref self: ContractState,
-            address_1: ContractAddress,
-            address_2: ContractAddress,
-            address_3: ContractAddress,
-            address_4: ContractAddress,
-            address_5: ContractAddress
+            address_list: Array<ContractAddress>
         ) {
-            /// @dev This function can only be called by the owner
             self.ownable.assert_only_owner();
-            self._whitelist_address(address_1, address_2, address_3, address_4, address_5);
+            self._whitelist_array(address_list);
         }
     }
 
@@ -163,23 +156,12 @@ mod NFTMint {
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
         /// @dev Registers the address and initializes their whitelist status to true (can mint)
-        fn _whitelist_address(
-            ref self: ContractState,
-            address_1: ContractAddress,
-            address_2: ContractAddress,
-            address_3: ContractAddress,
-            address_4: ContractAddress,
-            address_5: ContractAddress
-        ) {
-            self.whitelisted_address.write(address_1, true);
-
-            self.whitelisted_address.write(address_2, true);
-
-            self.whitelisted_address.write(address_3, true);
-
-            self.whitelisted_address.write(address_4, true);
-
-            self.whitelisted_address.write(address_5, true);
+        fn _whitelist_array(ref self: ContractState, address_list: Array<ContractAddress>) {
+            let mut i = 0;
+            while i < address_list.len() {
+                self.whitelisted_address.write(*address_list[i], true);
+                i += 1;
+            };
         }
 
         /// @dev Check whether an address is whitelisted
