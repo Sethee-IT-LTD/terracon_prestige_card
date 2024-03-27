@@ -2,11 +2,6 @@
 version = 1
 
 [[package]]
-name = "alexandria_data_structures"
-version = "0.1.0"
-source = "git+https://github.com/tekkac/alexandria?branch=feat%2Finterpolation-fast#4e9c13cc35f7f4c6fb4d4781808f2665a9615ff4"
-
-[[package]]
 name = "openzeppelin"
 version = "0.9.0"
 source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.9.0#364db5b1aecc1335d2e65db887291d19aa28937d"
@@ -20,7 +15,6 @@ source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.19.0#a3391dc
 name = "terracon_prestige_card"
 version = "0.1.0"
 dependencies = [
- "alexandria_data_structures",
  "openzeppelin",
  "snforge_std",
 ]

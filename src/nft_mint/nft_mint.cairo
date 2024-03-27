@@ -7,9 +7,6 @@ use core::zeroable::Zeroable;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use alexandria_data_structures::merkle_tree::{
-        Hasher, MerkleTree, poseidon::PoseidonHasherImpl, MerkleTreeTrait
-    };
     use terracon_prestige_card::nft_mint::{INFTMint};
     use terracon_prestige_card::errors::{
         MAX_SUPPLY_REACHED, INVALID_RECIPIENT, PUBLIC_SALE_NOT_STARTED, WHITELIST_MINT_EXCEEDED
@@ -42,6 +39,7 @@ use core::zeroable::Zeroable;
         public_sale_open: bool,
         whitelist_merkle_root: felt252,
         next_token_id: u256,
+        whitelisted_address: LegacyMap::<ContractAddress, bool>,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
@@ -107,13 +105,15 @@ use core::zeroable::Zeroable;
 
     #[abi(embed_v0)]
     impl NFTMint of INFTMint<ContractState> {
-        fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256, proof: Array<felt252>) {
+        fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256) {
             assert(!recipient.is_zero(), INVALID_RECIPIENT);
             let next_token_id = self.next_token_id.read();
             assert(next_token_id + quantity <= MAX_SUPPLY, MAX_SUPPLY_REACHED);
             // assert(self.erc721.balance_of(recipient) < MAX_TOKENS_PER_ADDRESS, 'Maximum NFT per address reached');
 
             let owner: ContractAddress = self.ownable.owner();
+
+            let whitelisted = self._is_whitelisted(recipient);
 
             let mut token_id = next_token_id;
             let mut minted_quantity = 0;
@@ -123,11 +123,7 @@ use core::zeroable::Zeroable;
                     // TODO: Check if the recipient is in the whitelist using the Merkle proof
                     // If in the whitelist, mint for free
                     // assert(/* Whitelist check */, WHITELIST_MINT_EXCEEDED);
-                    let root = self.whitelist_merkle_root.read();
-                    let mut state = PedersenTrait::new(recipient.into());
-                    let mut tree: MerkleTree<Hasher> = MerkleTreeTrait::new();
-                    assert(tree.verify(root, leaf, proof.span()), WHITELIST_MINT_EXCEEDED);
-
+                    assert(whitelisted, WHITELIST_MINT_EXCEEDED);
                     let token_uri: felt252 = 'https://bit.ly/497SFF6';
                     self.erc721._mint(recipient, token_id);
                     self.erc721._set_token_uri(token_id, token_uri);
@@ -143,7 +139,9 @@ use core::zeroable::Zeroable;
                     eth_dispatcher.transfer_from(get_caller_address(), owner, MINTING_FEE);
                     // Check if the correct minting fee is paid
                     // assert(/* Payment check */, INSUFFICIENT_PAYMENT);
+                    let token_uri: felt252 = 'https://bit.ly/497SFF6';
                     self.erc721._mint(recipient, token_id);
+                    self.erc721._set_token_uri(token_id, token_uri);
                 }
                 token_id += 1;
                 minted_quantity += 1;
@@ -165,17 +163,46 @@ use core::zeroable::Zeroable;
             };
         }
 
-        fn set_whitelist_merkle_root(ref self: ContractState, whitelist_merkle_root: felt252) {
+        fn whitelist_addresses(
+            ref self: ContractState,
+            address_1: ContractAddress,
+            address_2: ContractAddress,
+            address_3: ContractAddress,
+            address_4: ContractAddress,
+            address_5: ContractAddress
+        ) {
             // This function can only be called by the owner
             self.ownable.assert_only_owner();
-            self.whitelist_merkle_root.write(whitelist_merkle_root);
+            self._whitelist_address(address_1, address_2, address_3, address_4, address_5);
+        }
+    }
 
-            let current_time = get_block_timestamp();
-            if whitelist_merkle_root != 0 {
-                self.emit(Event::PreSaleOpen(PreSaleOpen { time: current_time }));
-            } else {
-                self.emit(Event::PreSaleClose(PreSaleClose { time: current_time }));
-            };
+    /// @dev Internal Functions implementation for the NFT Mint contract
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        /// @dev Registers the voters and initializes their voting status to true (can vote)
+        fn _whitelist_address(
+            ref self: ContractState,
+            address_1: ContractAddress,
+            address_2: ContractAddress,
+            address_3: ContractAddress,
+            address_4: ContractAddress,
+            address_5: ContractAddress
+        ) {
+            self.whitelisted_address.write(address_1, true);
+
+            self.whitelisted_address.write(address_2, true);
+
+            self.whitelisted_address.write(address_3, true);
+
+            self.whitelisted_address.write(address_4, true);
+
+            self.whitelisted_address.write(address_5, true);
+        }
+
+        /// @dev Check whether an address is whitelisted
+        fn _is_whitelisted(self: @ContractState, address: ContractAddress) -> bool {
+            self.whitelisted_address.read(address)
         }
     }
 }
