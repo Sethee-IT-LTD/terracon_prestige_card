@@ -46,8 +46,8 @@
 
 <p>Adhering to this guide ensures the Starknet contract's seamless integration with web applications, promoting functionality like total supply visibility and metadata accessibility.</p>
 
-<h2>In-depth Code Example for On-Chain Metadata Integration</h2>
-<p>Below is a Cairo 2.0 syntax-highlighted snippet showcasing on-chain metadata integration:</p>
+<h2>Potential (expermental AI generated) Code Example for On-Chain Metadata Integration</h2>
+<p>Hypothetical Cairo 2.0??? syntax-highlighted snippet showcasing on-chain metadata integration:</p>
 
 <pre>
 <code>
