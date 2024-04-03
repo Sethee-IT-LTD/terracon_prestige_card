@@ -35,68 +35,73 @@
 <h3>7. Events</h3>
 <p>Utilize events for significant contract activities, employing event structs and <code>emit</code> for communication.</p>
 
-<h2>Plan for Storing Metadata On-Chain (Please edit if you have better idea)</h2>
-<ol>
-  <li><strong>TokenMetadata Struct:</strong> Incorporate fields for extensive token details.</li>
-  <li><strong>Storage Mapping:</strong> Link <code>token_metadata</code> to token IDs for metadata access.</li>
-  <li><strong>Minting Modification:</strong> Adapt <code>_mint</code> to store provided metadata.</li>
-  <li><strong>Token URI Update:</strong> Revise <code>token_uri</code> to output metadata as a JSON string.</li>
-  <li><strong>Web Application Adjustments:</strong> Prepare the application to supply metadata during minting.</li>
-</ol>
+<h1>On-Chain Metadata Storage for Starknet Contract</h1>
 
-<p>????</p>
+<p>To store metadata directly on the blockchain, you can define a structure representing the metadata and adjust the contract for storage and retrieval. This guide outlines the implementation using Cairo 2.0 syntax:</p>
 
-<h2>Potential (expermental AI generated, please edit with correct if needed) Code Example for On-Chain Metadata Integration</h2>
-<p>Hypothetical Cairo 2.0??? syntax-highlighted snippet showcasing on-chain metadata integration:</p>
+<h2>1. Define the TokenMetadata Struct</h2>
+<p>First, define a <code>TokenMetadata</code> struct that includes the necessary fields for an NFT's metadata, as well as an array of <code>Attribute</code> structs for customizable properties.</p>
 
-<pre>
-<code>
-#[starknet::contract]
-mod NFTMint {
-  ...
-
-  #[storage]
-  struct Storage {
-    ...
-    token_metadata: Mapping<u256, TokenMetadata>,
-    ...
-  }
-
-  struct TokenMetadata {
-    name: felt,
-    description: felt,
-    image: felt,
-    external_url: felt,
-    attributes: felt
-  }
-
-  impl NFTMint {
-    ...
-
-    fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256, metadata: TokenMetadata) {
-      ...
-      for i in 0 until quantity {
-        let token_id: u256 = self.next_token_id.read();
-        self.erc721._mint(recipient, token_id);
-        self.token_metadata.write(token_id, metadata);
-        ...
-      }
-      ...
-    }
-
-    fn token_uri(self: @ContractState, token_id: u256) -> felt {
-      let metadata: TokenMetadata = self.token_metadata.read(token_id);
-      return construct_token_uri(metadata);
-    }
-    ...
-  }
-
-  fn construct_token_uri(metadata: TokenMetadata) -> felt {
-    // Logic to construct and return the token URI based on the on-chain metadata
-  }
-  ...
+<pre><code>#[derive(Drop, Serde)]
+struct Attribute {
+    trait_type: felt252,
+    value: felt252,
 }
-</code>
-</pre>
 
-<p>This example illustrates how to modify the minting function to accept metadata, store it on-chain, and utilize this metadata to generate a token URI dynamically.</p>
+#[derive(Drop, Serde)]
+struct TokenMetadata {
+    name: felt252,
+    description: felt252,
+    image: felt252,
+    external_url: felt252,
+    attributes: Array&lt;Attribute&gt;,
+}</code></pre>
+
+<p>This struct encompasses fields for the name, description, image URL, external URL, and an array of attributes.</p>
+
+<h2>2. Add Storage Variable</h2>
+<p>Integrate a new storage variable within the <code>Storage</code> struct to link token IDs with their corresponding metadata.</p>
+
+<pre><code>struct Storage {
+    // ...
+    token_metadata: LegacyMap&lt;u256, TokenMetadata&gt;,
+    // ...
+}</code></pre>
+
+<h2>3. Modify the <code>_mint</code> Function</h2>
+<p>Adjust the <code>_mint</code> function to accept metadata as an input parameter and store it using the token's ID as the key.</p>
+
+<pre><code>fn _mint(ref self: ContractState, recipient: ContractAddress, token_id: u256, metadata: TokenMetadata) {
+    // ...
+    self.token_metadata.write(token_id, metadata);
+    // ...
+}</code></pre>
+
+<h2>4. Update the <code>token_uri</code> Function</h2>
+<p>Revise the <code>token_uri</code> function to retrieve the metadata from storage and convert it to a JSON string before returning.</p>
+
+<pre><code>fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
+    let metadata = self.token_metadata.read(token_id);
+    // Convert the metadata to a JSON string and return it
+    return metadata.to_json();
+}</code></pre>
+
+<h2>5. Update the Minting Process</h2>
+<p>Modify the minting process to include metadata for each minted token, ensuring the metadata is passed to the <code>_mint</code> function.</p>
+
+<pre><code>fn mint(ref self: ContractState, recipient: ContractAddress, quantity: u256, metadata: TokenMetadata) {
+    // ...
+    let mut token_id = self.next_token_id.read();
+    for _ in 0 until quantity {
+        self._mint(recipient, token_id, metadata);
+        token_id += 1;
+    }
+    self.next_token_id.write(token_id);
+    // ...
+}</code></pre>
+
+<p>With these adjustments, the contract will now store each token's metadata on the blockchain, making it accessible through the <code>token_uri</code> function.</p>
+
+<p><strong>Note:</strong> The <code>to_json</code> function in the <code>token_uri</code> function is a placeholder for a method that converts the <code>TokenMetadata</code> struct to a JSON string. This function must be implemented separately or utilize a JSON serialization library compatible with Cairo.</p>
+
+<p>Remember to revise the <code>INFTMint</code> interface and any other relevant contract sections to reflect the incorporation of on-chain metadata storage.</p>
