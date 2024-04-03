@@ -44,7 +44,7 @@
   <li><strong>Web Application Adjustments:</strong> Prepare the application to supply metadata during minting.</li>
 </ol>
 
-<p>Adhering to this guide ensures the Starknet contract's seamless integration with web applications, promoting functionality like total supply visibility and metadata accessibility.</p>
+<p>????</p>
 
 <h2>Potential (expermental AI generated) Code Example for On-Chain Metadata Integration</h2>
 <p>Hypothetical Cairo 2.0??? syntax-highlighted snippet showcasing on-chain metadata integration:</p>
