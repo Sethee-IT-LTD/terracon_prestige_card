@@ -35,7 +35,7 @@
 <h3>7. Events</h3>
 <p>Utilize events for significant contract activities, employing event structs and <code>emit</code> for communication.</p>
 
-<h2>Plan for Storing Metadata On-Chain</h2>
+<h2>Plan for Storing Metadata On-Chain (Please edit if you have better idea)</h2>
 <ol>
   <li><strong>TokenMetadata Struct:</strong> Incorporate fields for extensive token details.</li>
   <li><strong>Storage Mapping:</strong> Link <code>token_metadata</code> to token IDs for metadata access.</li>
@@ -46,7 +46,7 @@
 
 <p>????</p>
 
-<h2>Potential (expermental AI generated) Code Example for On-Chain Metadata Integration</h2>
+<h2>Potential (expermental AI generated, please edit with correct if needed) Code Example for On-Chain Metadata Integration</h2>
 <p>Hypothetical Cairo 2.0??? syntax-highlighted snippet showcasing on-chain metadata integration:</p>
 
 <pre>
